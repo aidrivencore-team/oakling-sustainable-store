@@ -1,14 +1,37 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from 'react';
+import { Header } from '@/widgets/header';
+import { HeroSection } from '@/widgets/hero-section';
+import { CategorySection } from '@/widgets/category-section';
+import { FeaturedProducts } from '@/widgets/featured-products';
+import { SustainabilitySection } from '@/widgets/sustainability-section';
+import { Footer } from '@/widgets/footer';
+import { Locale } from '@/shared/config/i18n';
+import { Currency } from '@/shared/config/currency';
 
-const Index = () => {
+const HomePage = () => {
+  const [locale, setLocale] = useState<Locale>('en');
+  const [currency, setCurrency] = useState<Currency>('GBP');
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
+    <div className="min-h-screen bg-background">
+      <Header
+        cartItemCount={2}
+        currentLocale={locale}
+        currentCurrency={currency}
+        onLocaleChange={setLocale}
+        onCurrencyChange={setCurrency}
+      />
+      
+      <main>
+        <HeroSection />
+        <CategorySection />
+        <FeaturedProducts currency={currency} />
+        <SustainabilitySection />
+      </main>
+
+      <Footer />
     </div>
   );
 };
 
-export default Index;
+export default HomePage;
