@@ -1,25 +1,56 @@
 import { motion } from 'framer-motion';
 import { ArrowRight, Sparkles } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { t } from '@/shared/config/i18n';
 import { Button } from '@/shared/ui';
 import heroImage from '@/assets/hero-background.jpg';
 
 export function HeroSection() {
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setPrefersReducedMotion(mediaQuery.matches);
+
+    const handleChange = (e: MediaQueryListEvent) => {
+      setPrefersReducedMotion(e.matches);
+    };
+
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
+
   return (
     <section className="relative min-h-screen overflow-hidden">
-      {/* Background Image */}
-      <div className="absolute inset-0">
-        <img
-          src={heroImage}
-          alt="Child in meadow"
-          className="h-full w-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/60 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
+      {/* Background Video / Fallback Image */}
+      <div className="absolute inset-0 z-0">
+        {!prefersReducedMotion ? (
+          <video
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            poster={heroImage}
+            className="h-full w-full object-cover"
+          >
+            <source src="/videos/hero-background-video.mp4" type="video/mp4" />
+          </video>
+        ) : (
+          <img
+            src={heroImage}
+            alt="Child in meadow"
+            className="h-full w-full object-cover"
+          />
+        )}
       </div>
 
+      {/* Overlay for text readability */}
+      <div className="absolute inset-0 z-[1] bg-gradient-to-r from-background/85 via-background/50 to-background/20" />
+      <div className="absolute inset-0 z-[1] bg-gradient-to-t from-background/70 via-transparent to-transparent" />
+
       {/* Floating Elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      <div className="absolute inset-0 z-[1] overflow-hidden pointer-events-none">
         {[...Array(5)].map((_, i) => (
           <motion.div
             key={i}
@@ -42,7 +73,7 @@ export function HeroSection() {
       </div>
 
       {/* Content */}
-      <div className="container relative mx-auto flex min-h-screen items-center px-4 pt-32 pb-16">
+      <div className="container relative z-[2] mx-auto flex min-h-screen items-center px-4 pt-32 pb-16">
         <div className="max-w-2xl">
           {/* Badge */}
           <motion.div
@@ -117,7 +148,7 @@ export function HeroSection() {
 
       {/* Scroll Indicator */}
       <motion.div
-        className="absolute bottom-8 left-1/2 -translate-x-1/2"
+        className="absolute bottom-8 left-1/2 z-[2] -translate-x-1/2"
         animate={{ y: [0, 10, 0] }}
         transition={{ duration: 2, repeat: Infinity }}
       >
