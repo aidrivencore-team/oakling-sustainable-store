@@ -100,48 +100,53 @@ const getIncentiveMessage = (count: number): string => {
 const formatPrice = (price: number): string => `£${price.toFixed(2)}`;
 
 // ============================================================================
-// 3D STACK TRANSFORMS - Complex physical deck simulation
+// 3D STACK TRANSFORMS - visible 3-layer deck (strict)
 // ============================================================================
 
 const getCardTransform = (index: number, activeIndex: number, total: number) => {
   // Calculate relative position from active card (circular)
   let relativeIndex = index - activeIndex;
   if (relativeIndex < 0) relativeIndex += total;
-  
+
+  // Strict 3-layer stack requirements
   if (relativeIndex === 0) {
-    // Active card - front of deck, no transform
     return {
-      translateY: 0,
-      translateZ: 0,
-      rotateX: 0,
+      y: 0,
       scale: 1,
       opacity: 1,
-      blur: 0,
-      zIndex: total + 10,
-    };
-  } else if (relativeIndex === 1) {
-    // First card behind - visible edge peeking out top
-    return {
-      translateY: -24,
-      translateZ: -40,
-      rotateX: 4,
-      scale: 0.92,
-      opacity: 0.7,
-      blur: 1.5,
-      zIndex: total - 1,
-    };
-  } else {
-    // Second+ card behind - further back in the deck
-    return {
-      translateY: -44,
-      translateZ: -80,
-      rotateX: 7,
-      scale: 0.84,
-      opacity: 0.45,
-      blur: 3,
-      zIndex: total - 2,
+      filter: 'blur(0px)',
+      zIndex: 3,
     };
   }
+
+  if (relativeIndex === 1) {
+    return {
+      y: -12,
+      scale: 0.95,
+      opacity: 0.6,
+      filter: 'blur(1px)',
+      zIndex: 2,
+    };
+  }
+
+  if (relativeIndex === 2) {
+    return {
+      y: -24,
+      scale: 0.9,
+      opacity: 0.3,
+      filter: 'blur(2px)',
+      zIndex: 1,
+    };
+  }
+
+  // Anything beyond the third card stays out of view (still in DOM if present)
+  return {
+    y: -36,
+    scale: 0.88,
+    opacity: 0,
+    filter: 'blur(3px)',
+    zIndex: 0,
+  };
 };
 
 // ============================================================================
@@ -255,7 +260,7 @@ const PriceBlock = ({
   </div>
 );
 
-// 3D Card Component - Physical deck simulation with perspective
+// 3D Card Component - Visible stacked deck (no active shadow)
 const Card3D = ({
   category,
   isActive,
@@ -268,7 +273,7 @@ const Card3D = ({
   onDragEnd: (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => void;
 }) => (
   <motion.div
-    className="absolute inset-0 rounded-3xl overflow-hidden shadow-2xl"
+    className="absolute inset-0 rounded-3xl overflow-hidden"
     style={{
       zIndex: transform.zIndex,
       transformOrigin: 'center bottom',
@@ -276,12 +281,10 @@ const Card3D = ({
     }}
     initial={false}
     animate={{
-      y: transform.translateY,
-      z: transform.translateZ,
-      rotateX: transform.rotateX,
+      y: transform.y,
       scale: transform.scale,
       opacity: transform.opacity,
-      filter: `blur(${transform.blur}px)`,
+      filter: transform.filter,
     }}
     transition={{
       type: 'spring',
@@ -301,7 +304,7 @@ const Card3D = ({
       className="w-full h-full object-cover pointer-events-none select-none"
       draggable={false}
     />
-    {/* Subtle vignette for depth */}
+    {/* Subtle vignette for depth (kept minimal; depth comes from the stack) */}
     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
     
     {/* Look Label - Premium Serif with refined positioning */}
@@ -435,9 +438,9 @@ export const ShopTheLookSection = () => {
           onMouseLeave={() => setIsHovered(false)}
         >
           {/* Left Column: 3D Card Stack with perspective container */}
-          <div className="relative">
+          <div className="relative overflow-visible">
             <div 
-              className="relative w-full"
+              className="relative w-full overflow-visible"
               style={{ 
                 aspectRatio: '4/5',
                 perspective: '1200px',
