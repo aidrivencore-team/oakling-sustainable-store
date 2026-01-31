@@ -100,39 +100,45 @@ const getIncentiveMessage = (count: number): string => {
 const formatPrice = (price: number): string => `£${price.toFixed(2)}`;
 
 // ============================================================================
-// 3D STACK TRANSFORMS
+// 3D STACK TRANSFORMS - Complex physical deck simulation
 // ============================================================================
 
 const getCardTransform = (index: number, activeIndex: number, total: number) => {
-  // Calculate relative position from active card
+  // Calculate relative position from active card (circular)
   let relativeIndex = index - activeIndex;
   if (relativeIndex < 0) relativeIndex += total;
   
   if (relativeIndex === 0) {
-    // Active card
+    // Active card - front of deck, no transform
     return {
-      y: 0,
+      translateY: 0,
+      translateZ: 0,
+      rotateX: 0,
       scale: 1,
       opacity: 1,
-      filter: 'blur(0px)',
-      zIndex: total,
+      blur: 0,
+      zIndex: total + 10,
     };
   } else if (relativeIndex === 1) {
-    // First behind - peeks above the active card
+    // First card behind - visible edge peeking out top
     return {
-      y: -16,
-      scale: 0.94,
-      opacity: 0.55,
-      filter: 'blur(1px)',
+      translateY: -24,
+      translateZ: -40,
+      rotateX: 4,
+      scale: 0.92,
+      opacity: 0.7,
+      blur: 1.5,
       zIndex: total - 1,
     };
   } else {
-    // Second+ behind - peeks further above
+    // Second+ card behind - further back in the deck
     return {
-      y: -28,
-      scale: 0.88,
-      opacity: 0.35,
-      filter: 'blur(2px)',
+      translateY: -44,
+      translateZ: -80,
+      rotateX: 7,
+      scale: 0.84,
+      opacity: 0.45,
+      blur: 3,
       zIndex: total - 2,
     };
   }
@@ -142,7 +148,7 @@ const getCardTransform = (index: number, activeIndex: number, total: number) => 
 // SUB-COMPONENTS
 // ============================================================================
 
-// Custom Selection Circle - Premium 1px stroke with animated fill
+// Custom Selection Circle - Ultra-minimal 1px stroke with smooth fill
 const SelectionCircle = ({ 
   selected, 
   onToggle 
@@ -152,18 +158,30 @@ const SelectionCircle = ({
 }) => (
   <motion.button
     onClick={onToggle}
-    className="w-[22px] h-[22px] rounded-full flex-shrink-0"
+    className="w-5 h-5 rounded-full flex-shrink-0 relative overflow-hidden"
     style={{
-      border: '1px solid',
-      borderColor: selected ? 'hsl(var(--forest))' : 'hsl(var(--border))',
+      boxShadow: `inset 0 0 0 1px ${selected ? 'hsl(var(--forest))' : 'hsl(var(--border))'}`,
+      backgroundColor: 'transparent',
     }}
-    animate={{
-      backgroundColor: selected ? 'hsl(var(--forest))' : 'transparent',
-    }}
-    whileTap={{ scale: 0.95 }}
-    transition={{ duration: 0.2, ease: 'easeOut' }}
+    whileTap={{ scale: 0.92 }}
+    transition={{ duration: 0.15 }}
     aria-label={selected ? 'Remove from bundle' : 'Add to bundle'}
-  />
+  >
+    <motion.div
+      className="absolute inset-0 rounded-full"
+      initial={false}
+      animate={{
+        scale: selected ? 1 : 0,
+        opacity: selected ? 1 : 0,
+      }}
+      style={{ backgroundColor: 'hsl(var(--forest))' }}
+      transition={{ 
+        type: 'spring', 
+        stiffness: 500, 
+        damping: 30,
+      }}
+    />
+  </motion.button>
 );
 
 // Product Row (clean, consistent whitespace)
@@ -237,65 +255,70 @@ const PriceBlock = ({
   </div>
 );
 
-// 3D Card Component
+// 3D Card Component - Physical deck simulation with perspective
 const Card3D = ({
   category,
   isActive,
   transform,
   onDragEnd,
-  isMobile,
 }: {
   category: LookCategory;
   isActive: boolean;
   transform: ReturnType<typeof getCardTransform>;
   onDragEnd: (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => void;
-  isMobile: boolean;
 }) => (
   <motion.div
-    className="absolute inset-0 rounded-3xl overflow-hidden cursor-grab active:cursor-grabbing"
+    className="absolute inset-0 rounded-3xl overflow-hidden shadow-2xl"
     style={{
       zIndex: transform.zIndex,
-      transformStyle: 'preserve-3d',
-      perspective: 1000,
+      transformOrigin: 'center bottom',
+      backfaceVisibility: 'hidden',
     }}
-  animate={{
-      y: transform.y,
+    initial={false}
+    animate={{
+      y: transform.translateY,
+      z: transform.translateZ,
+      rotateX: transform.rotateX,
       scale: transform.scale,
       opacity: transform.opacity,
-      filter: transform.filter,
+      filter: `blur(${transform.blur}px)`,
     }}
     transition={{
       type: 'spring',
-      stiffness: 350,
-      damping: 35,
+      stiffness: 300,
+      damping: 30,
+      mass: 1,
     }}
     drag={isActive ? 'x' : false}
     dragConstraints={{ left: 0, right: 0 }}
-    dragElastic={0.2}
+    dragElastic={0.15}
     onDragEnd={isActive ? onDragEnd : undefined}
+    whileDrag={{ cursor: 'grabbing' }}
   >
     <img
       src={category.lifestyleImage}
       alt={category.displayName}
-      className="w-full h-full object-cover"
+      className="w-full h-full object-cover pointer-events-none select-none"
       draggable={false}
     />
-    {/* Dark gradient overlay for text legibility */}
-    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+    {/* Subtle vignette for depth */}
+    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
     
-    {/* Look Label - Serif font inside card with refined positioning */}
+    {/* Look Label - Premium Serif with refined positioning */}
     {isActive && (
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
+        initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="absolute bottom-8 left-8"
+        exit={{ opacity: 0, y: -8 }}
+        transition={{ delay: 0.25, duration: 0.4 }}
+        className="absolute bottom-10 left-10"
       >
         <span
-          className="text-white text-xl font-normal tracking-[0.15em]"
+          className="text-white text-xl font-normal tracking-[0.2em] uppercase"
           style={{
-            fontFamily: 'Georgia, "Times New Roman", serif',
-            textShadow: '0 2px 8px rgba(0,0,0,0.3)',
+            fontFamily: 'Georgia, "Times New Roman", Times, serif',
+            textShadow: '0 2px 12px rgba(0,0,0,0.5)',
+            letterSpacing: '0.2em',
           }}
         >
           {category.displayName}
@@ -405,23 +428,24 @@ export const ShopTheLookSection = () => {
           </p>
         </div>
 
-        {/* Main Content */}
+        {/* Main Content - Precise grid alignment */}
         <div
-          className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 max-w-6xl mx-auto items-stretch"
-          style={{ maxHeight: isMobile ? 'none' : '750px' }}
+          className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 max-w-6xl mx-auto"
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
         >
-          {/* Left Column: 3D Card Stack */}
-          <div className={`${isMobile ? '' : 'sticky top-24'}`}>
+          {/* Left Column: 3D Card Stack with perspective container */}
+          <div className="relative">
             <div 
               className="relative w-full"
               style={{ 
                 aspectRatio: '4/5',
-                perspective: '1000px',
+                perspective: '1200px',
+                perspectiveOrigin: 'center 40%',
                 transformStyle: 'preserve-3d',
               }}
             >
+              {/* Render cards in reverse order so active is on top */}
               {LOOK_CATEGORIES.map((category, index) => (
                 <Card3D
                   key={category.id}
@@ -429,44 +453,53 @@ export const ShopTheLookSection = () => {
                   isActive={index === activeIndex}
                   transform={getCardTransform(index, activeIndex, LOOK_CATEGORIES.length)}
                   onDragEnd={handleDragEnd}
-                  isMobile={isMobile}
                 />
               ))}
             </div>
 
-            {/* Mobile: Simple Indicator */}
+            {/* Mobile: Minimal indicator */}
             {isMobile && (
-              <p className="text-center text-muted-foreground mt-4">
+              <p className="text-center text-muted-foreground/60 mt-6 text-sm tracking-widest">
                 {activeIndex + 1} / {LOOK_CATEGORIES.length}
               </p>
             )}
           </div>
 
-          {/* Right Column: Product List - Height synced with left column */}
-          <div className="flex flex-col h-full">
+          {/* Right Column: Product List - Grid layout for precise height sync */}
+          <div 
+            className="grid"
+            style={{ 
+              gridTemplateRows: '1fr auto',
+              minHeight: isMobile ? 'auto' : 'calc((100vw - 8rem) * 0.4 * 1.25)', // Match 4:5 aspect ratio
+            }}
+          >
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeCategory.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-                className="flex flex-col flex-1 h-full"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
+                className="contents"
               >
-                {/* Product Rows - Takes available space */}
-                <div className="flex-1">
-                  {activeCategory.products.map((product) => (
-                    <ProductRow
-                      key={product.id}
-                      product={product}
-                      selected={selectedItems.has(product.id)}
-                      onToggle={() => toggleItem(product.id)}
-                    />
+                {/* Product Rows - Expands to fill available space */}
+                <div className="flex flex-col justify-center">
+                  {activeCategory.products.map((product, idx) => (
+                    <div key={product.id}>
+                      <ProductRow
+                        product={product}
+                        selected={selectedItems.has(product.id)}
+                        onToggle={() => toggleItem(product.id)}
+                      />
+                      {idx < activeCategory.products.length - 1 && (
+                        <div className="h-px bg-border/20" />
+                      )}
+                    </div>
                   ))}
                 </div>
 
-                {/* Bottom Section - Anchored at bottom */}
-                <div className="mt-auto">
+                {/* Bottom Section - Anchored precisely at bottom edge */}
+                <div className="pt-6">
                   {/* Price Block */}
                   <PriceBlock
                     originalTotal={pricingData.originalTotal}
@@ -475,25 +508,27 @@ export const ShopTheLookSection = () => {
                   />
 
                   {/* Add to Bag Button */}
-                  <button
-                    className="w-full py-4 rounded-2xl text-lg font-medium transition-all duration-200 hover:opacity-90"
+                  <motion.button
+                    className="w-full py-4 rounded-2xl text-lg font-medium transition-colors"
                     style={{
                       backgroundColor: 'hsl(var(--forest))',
                       color: 'hsl(var(--forest-foreground))',
                     }}
                     disabled={pricingData.selectedCount === 0}
+                    whileHover={{ opacity: 0.92 }}
+                    whileTap={{ scale: 0.98 }}
                   >
                     Add Bundle to Bag
-                  </button>
+                  </motion.button>
 
                   {/* Incentive Message */}
                   <AnimatePresence mode="wait">
                     <motion.p
                       key={pricingData.incentiveMessage}
-                      initial={{ opacity: 0, y: 5 }}
+                      initial={{ opacity: 0, y: 6 }}
                       animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -5 }}
-                      className="text-center text-muted-foreground text-sm mt-4"
+                      exit={{ opacity: 0, y: -6 }}
+                      className="text-center text-muted-foreground/70 text-sm mt-5 tracking-wide"
                     >
                       {pricingData.incentiveMessage}
                     </motion.p>
