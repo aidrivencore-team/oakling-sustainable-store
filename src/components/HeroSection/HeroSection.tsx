@@ -1,4 +1,3 @@
-// sync trigger
 import { FC } from 'react';
 import styles from './HeroSection.module.scss';
 
