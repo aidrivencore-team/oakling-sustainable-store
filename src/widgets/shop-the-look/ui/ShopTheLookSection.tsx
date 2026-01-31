@@ -111,30 +111,27 @@ const getCardTransform = (index: number, activeIndex: number, total: number) => 
   if (relativeIndex === 0) {
     // Active card
     return {
-      z: 0,
-      rotateX: 0,
+      y: 0,
       scale: 1,
       opacity: 1,
       filter: 'blur(0px)',
       zIndex: total,
     };
   } else if (relativeIndex === 1) {
-    // First behind
+    // First behind - peeks above the active card
     return {
-      z: -60,
-      rotateX: -6,
-      scale: 0.92,
-      opacity: 0.5,
+      y: -16,
+      scale: 0.94,
+      opacity: 0.55,
       filter: 'blur(1px)',
       zIndex: total - 1,
     };
   } else {
-    // Second+ behind
+    // Second+ behind - peeks further above
     return {
-      z: -120,
-      rotateX: -10,
-      scale: 0.84,
-      opacity: 0.3,
+      y: -28,
+      scale: 0.88,
+      opacity: 0.35,
       filter: 'blur(2px)',
       zIndex: total - 2,
     };
@@ -145,7 +142,7 @@ const getCardTransform = (index: number, activeIndex: number, total: number) => 
 // SUB-COMPONENTS
 // ============================================================================
 
-// Custom Selection Circle (no browser checkboxes)
+// Custom Selection Circle - Premium 1px stroke with animated fill
 const SelectionCircle = ({ 
   selected, 
   onToggle 
@@ -153,22 +150,23 @@ const SelectionCircle = ({
   selected: boolean; 
   onToggle: () => void;
 }) => (
-  <button
+  <motion.button
     onClick={onToggle}
-    className="w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 flex-shrink-0"
+    className="w-[22px] h-[22px] rounded-full flex-shrink-0"
     style={{
+      border: '1px solid',
       borderColor: selected ? 'hsl(var(--forest))' : 'hsl(var(--border))',
+    }}
+    animate={{
       backgroundColor: selected ? 'hsl(var(--forest))' : 'transparent',
     }}
+    whileTap={{ scale: 0.95 }}
+    transition={{ duration: 0.2, ease: 'easeOut' }}
     aria-label={selected ? 'Remove from bundle' : 'Add to bundle'}
-  >
-    {selected && (
-      <span className="w-2 h-2 rounded-full bg-white" />
-    )}
-  </button>
+  />
 );
 
-// Product Row (clean, borderless)
+// Product Row (clean, consistent whitespace)
 const ProductRow = ({
   product,
   selected,
@@ -178,7 +176,7 @@ const ProductRow = ({
   selected: boolean;
   onToggle: () => void;
 }) => (
-  <div className="flex items-center gap-4 py-5">
+  <div className="flex items-center gap-4 py-6">
     <div className="w-16 h-16 rounded-xl overflow-hidden bg-secondary flex-shrink-0">
       <img
         src={product.thumbnail}
@@ -260,9 +258,8 @@ const Card3D = ({
       transformStyle: 'preserve-3d',
       perspective: 1000,
     }}
-    animate={{
-      z: transform.z,
-      rotateX: transform.rotateX,
+  animate={{
+      y: transform.y,
       scale: transform.scale,
       opacity: transform.opacity,
       filter: transform.filter,
@@ -286,16 +283,16 @@ const Card3D = ({
     {/* Dark gradient overlay for text legibility */}
     <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
     
-    {/* Look Label - Serif font inside card */}
+    {/* Look Label - Serif font inside card with refined positioning */}
     {isActive && (
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="absolute bottom-6 left-6"
+        className="absolute bottom-8 left-8"
       >
         <span
-          className="text-white text-xl font-normal tracking-wide"
+          className="text-white text-xl font-normal tracking-[0.15em]"
           style={{
             fontFamily: 'Georgia, "Times New Roman", serif',
             textShadow: '0 2px 8px rgba(0,0,0,0.3)',
@@ -410,7 +407,7 @@ export const ShopTheLookSection = () => {
 
         {/* Main Content */}
         <div
-          className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 max-w-6xl mx-auto"
+          className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 max-w-6xl mx-auto items-stretch"
           style={{ maxHeight: isMobile ? 'none' : '750px' }}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
@@ -445,8 +442,8 @@ export const ShopTheLookSection = () => {
             )}
           </div>
 
-          {/* Right Column: Product List */}
-          <div className="flex flex-col">
+          {/* Right Column: Product List - Height synced with left column */}
+          <div className="flex flex-col h-full">
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeCategory.id}
@@ -454,10 +451,10 @@ export const ShopTheLookSection = () => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.3 }}
-                className="flex-1"
+                className="flex flex-col flex-1 h-full"
               >
-                {/* Product Rows */}
-                <div className="space-y-0">
+                {/* Product Rows - Takes available space */}
+                <div className="flex-1">
                   {activeCategory.products.map((product) => (
                     <ProductRow
                       key={product.id}
@@ -468,39 +465,40 @@ export const ShopTheLookSection = () => {
                   ))}
                 </div>
 
-                {/* Price Block */}
-                <div className="border-t border-border/30 mt-4">
+                {/* Bottom Section - Anchored at bottom */}
+                <div className="mt-auto">
+                  {/* Price Block */}
                   <PriceBlock
                     originalTotal={pricingData.originalTotal}
                     finalTotal={pricingData.finalTotal}
                     savings={pricingData.savings}
                   />
-                </div>
 
-                {/* Add to Bag Button */}
-                <button
-                  className="w-full py-4 rounded-2xl text-lg font-medium transition-all duration-200 hover:opacity-90"
-                  style={{
-                    backgroundColor: 'hsl(var(--forest))',
-                    color: 'hsl(var(--forest-foreground))',
-                  }}
-                  disabled={pricingData.selectedCount === 0}
-                >
-                  Add Bundle to Bag
-                </button>
-
-                {/* Incentive Message */}
-                <AnimatePresence mode="wait">
-                  <motion.p
-                    key={pricingData.incentiveMessage}
-                    initial={{ opacity: 0, y: 5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -5 }}
-                    className="text-center text-muted-foreground text-sm mt-4"
+                  {/* Add to Bag Button */}
+                  <button
+                    className="w-full py-4 rounded-2xl text-lg font-medium transition-all duration-200 hover:opacity-90"
+                    style={{
+                      backgroundColor: 'hsl(var(--forest))',
+                      color: 'hsl(var(--forest-foreground))',
+                    }}
+                    disabled={pricingData.selectedCount === 0}
                   >
-                    {pricingData.incentiveMessage}
-                  </motion.p>
-                </AnimatePresence>
+                    Add Bundle to Bag
+                  </button>
+
+                  {/* Incentive Message */}
+                  <AnimatePresence mode="wait">
+                    <motion.p
+                      key={pricingData.incentiveMessage}
+                      initial={{ opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -5 }}
+                      className="text-center text-muted-foreground text-sm mt-4"
+                    >
+                      {pricingData.incentiveMessage}
+                    </motion.p>
+                  </AnimatePresence>
+                </div>
               </motion.div>
             </AnimatePresence>
           </div>
