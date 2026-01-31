@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
+import { Check } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 // Import lifestyle images for 3D stack
@@ -153,7 +154,7 @@ const getCardTransform = (index: number, activeIndex: number, total: number) => 
 // SUB-COMPONENTS
 // ============================================================================
 
-// Custom Selection Circle - Ultra-minimal 1px stroke with smooth fill
+// Checkmark Selection Circle - Clean 24px with checkmark when selected
 const SelectionCircle = ({ 
   selected, 
   onToggle 
@@ -162,34 +163,36 @@ const SelectionCircle = ({
   onToggle: () => void;
 }) => (
   <motion.button
-    onClick={onToggle}
-    className="w-5 h-5 rounded-full flex-shrink-0 relative overflow-hidden"
-    style={{
-      boxShadow: `inset 0 0 0 1px ${selected ? 'hsl(var(--forest))' : 'hsl(var(--border))'}`,
-      backgroundColor: 'transparent',
+    onClick={(e) => {
+      e.stopPropagation();
+      onToggle();
     }}
-    whileTap={{ scale: 0.92 }}
+    className="w-6 h-6 rounded-full flex-shrink-0 relative overflow-hidden flex items-center justify-center"
+    style={{
+      border: `1.5px solid ${selected ? 'hsl(var(--forest))' : 'hsl(var(--border))'}`,
+      backgroundColor: selected ? 'hsl(var(--forest))' : 'transparent',
+    }}
+    whileTap={{ scale: 0.9 }}
+    whileHover={{ scale: 1.05 }}
     transition={{ duration: 0.15 }}
     aria-label={selected ? 'Remove from bundle' : 'Add to bundle'}
   >
-    <motion.div
-      className="absolute inset-0 rounded-full"
-      initial={false}
-      animate={{
-        scale: selected ? 1 : 0,
-        opacity: selected ? 1 : 0,
-      }}
-      style={{ backgroundColor: 'hsl(var(--forest))' }}
-      transition={{ 
-        type: 'spring', 
-        stiffness: 500, 
-        damping: 30,
-      }}
-    />
+    <AnimatePresence>
+      {selected && (
+        <motion.div
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0, opacity: 0 }}
+          transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+        >
+          <Check className="w-4 h-4 text-white" strokeWidth={3} />
+        </motion.div>
+      )}
+    </AnimatePresence>
   </motion.button>
 );
 
-// Product Row (clean, consistent whitespace)
+// Product Row - Compact card with hover effect
 const ProductRow = ({
   product,
   selected,
@@ -199,8 +202,13 @@ const ProductRow = ({
   selected: boolean;
   onToggle: () => void;
 }) => (
-  <div className="flex items-center gap-4 py-6">
-    <div className="w-16 h-16 rounded-xl overflow-hidden bg-secondary flex-shrink-0">
+  <motion.div 
+    className="flex items-center gap-3 p-3 rounded-xl bg-[#FDFBF7] cursor-pointer"
+    whileHover={{ scale: 1.01, backgroundColor: '#FAF7F2' }}
+    transition={{ duration: 0.15 }}
+    onClick={onToggle}
+  >
+    <div className="w-14 h-14 rounded-lg overflow-hidden bg-secondary flex-shrink-0">
       <img
         src={product.thumbnail}
         alt={product.name}
@@ -208,17 +216,17 @@ const ProductRow = ({
       />
     </div>
     <div className="flex-1 min-w-0">
-      <p className="font-medium text-foreground">{product.name}</p>
-      <p className="text-sm text-muted-foreground">{product.size}</p>
+      <p className="font-medium text-foreground text-sm">{product.name}</p>
+      <p className="text-xs text-muted-foreground">{product.size}</p>
     </div>
-    <div className="flex items-center gap-4">
-      <span className="font-semibold text-forest">{formatPrice(product.price)}</span>
+    <div className="flex items-center gap-3">
+      <span className="font-semibold text-forest text-sm">{formatPrice(product.price)}</span>
       <SelectionCircle selected={selected} onToggle={onToggle} />
     </div>
-  </div>
+  </motion.div>
 );
 
-// Price Block with savings
+// Price Block with savings and pulse animation
 const PriceBlock = ({
   originalTotal,
   finalTotal,
@@ -228,18 +236,26 @@ const PriceBlock = ({
   finalTotal: number;
   savings: number;
 }) => (
-  <div className="flex items-center justify-between py-6">
-    <div className="flex items-baseline gap-3">
+  <motion.div 
+    className="flex items-center justify-between py-4"
+    key={finalTotal}
+    initial={{ scale: 1 }}
+    animate={{ 
+      scale: [1, 1.02, 1],
+      transition: { duration: 0.3, ease: 'easeOut' }
+    }}
+  >
+    <div className="flex items-baseline gap-2">
       {savings > 0 && (
-        <span className="text-muted-foreground line-through text-lg">
+        <span className="text-muted-foreground line-through text-base">
           {formatPrice(originalTotal)}
         </span>
       )}
       <motion.span
-        key={finalTotal}
-        initial={{ opacity: 0, y: 10 }}
+        key={`price-${finalTotal}`}
+        initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-2xl font-semibold text-forest"
+        className="text-xl font-semibold text-forest"
       >
         {formatPrice(finalTotal)}
       </motion.span>
@@ -251,13 +267,13 @@ const PriceBlock = ({
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.9 }}
-          className="text-forest font-medium"
+          className="text-forest font-medium text-sm"
         >
           Save {formatPrice(savings)}
         </motion.span>
       )}
     </AnimatePresence>
-  </div>
+  </motion.div>
 );
 
 // 3D Card Component - Visible stacked deck (no active shadow)
@@ -349,13 +365,13 @@ export const ShopTheLookSection = () => {
     setSelectedItems(new Set(allProductIds));
   }, [activeIndex, activeCategory.products]);
 
-  // Auto-advance timer
+  // Auto-advance timer - 3 seconds for faster pace
   useEffect(() => {
     if (isHovered) return;
     
     const interval = setInterval(() => {
       setActiveIndex((prev) => (prev + 1) % LOOK_CATEGORIES.length);
-    }, 5000);
+    }, 3000);
 
     return () => clearInterval(interval);
   }, [isHovered]);
@@ -419,34 +435,35 @@ export const ShopTheLookSection = () => {
   }, [activeCategory.products, selectedItems]);
 
   return (
-    <section className="py-16 md:py-24 bg-background">
+    <section className="py-12 md:py-16 bg-background">
       <div className="container mx-auto px-4 md:px-6">
         {/* Header */}
-        <div className="text-center mb-12 md:mb-16">
-          <h2 className="text-3xl md:text-4xl font-semibold text-foreground mb-3">
+        <div className="text-center mb-8 md:mb-12">
+          <h2 className="text-2xl md:text-3xl font-semibold text-foreground mb-2">
             Shop The Look
           </h2>
-          <p className="text-muted-foreground text-lg">
+          <p className="text-muted-foreground text-base">
             Curated ensembles styled with intention
           </p>
         </div>
 
-        {/* Main Content - Precise grid alignment */}
+        {/* Main Content - Compact grid alignment */}
         <div
-          className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 max-w-6xl mx-auto"
+          className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10 max-w-5xl mx-auto items-stretch"
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
         >
-          {/* Left Column: 3D Card Stack with perspective container */}
+          {/* Left Column: 3D Card Stack with click-to-advance */}
           <div className="relative overflow-visible">
             <div 
-              className="relative w-full overflow-visible"
+              className="relative w-full overflow-visible cursor-pointer"
               style={{ 
                 aspectRatio: '4/5',
                 perspective: '1200px',
                 perspectiveOrigin: 'center 40%',
                 transformStyle: 'preserve-3d',
               }}
+              onClick={cycleNext}
             >
               {/* Render cards in reverse order so active is on top */}
               {LOOK_CATEGORIES.map((category, index) => (
@@ -462,7 +479,7 @@ export const ShopTheLookSection = () => {
 
             {/* Mobile: Minimal indicator */}
             {isMobile && (
-              <p className="text-center text-muted-foreground/60 mt-6 text-sm tracking-widest">
+              <p className="text-center text-muted-foreground/60 mt-4 text-xs tracking-widest">
                 {activeIndex + 1} / {LOOK_CATEGORIES.length}
               </p>
             )}
@@ -473,36 +490,32 @@ export const ShopTheLookSection = () => {
             className="grid"
             style={{ 
               gridTemplateRows: '1fr auto',
-              minHeight: isMobile ? 'auto' : 'calc((100vw - 8rem) * 0.4 * 1.25)', // Match 4:5 aspect ratio
+              minHeight: isMobile ? 'auto' : 'calc((100vw - 8rem) * 0.35 * 1.25)', // Match 4:5 aspect ratio
             }}
           >
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeCategory.id}
-                initial={{ opacity: 0, x: 20 }}
+                initial={{ opacity: 0, x: 16 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
+                exit={{ opacity: 0, x: -16 }}
+                transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
                 className="contents"
               >
-                {/* Product Rows - Expands to fill available space */}
-                <div className="flex flex-col justify-center">
-                  {activeCategory.products.map((product, idx) => (
-                    <div key={product.id}>
-                      <ProductRow
-                        product={product}
-                        selected={selectedItems.has(product.id)}
-                        onToggle={() => toggleItem(product.id)}
-                      />
-                      {idx < activeCategory.products.length - 1 && (
-                        <div className="h-px bg-border/20" />
-                      )}
-                    </div>
+                {/* Product Rows - Compact cards with gaps */}
+                <div className="flex flex-col justify-center gap-2">
+                  {activeCategory.products.map((product) => (
+                    <ProductRow
+                      key={product.id}
+                      product={product}
+                      selected={selectedItems.has(product.id)}
+                      onToggle={() => toggleItem(product.id)}
+                    />
                   ))}
                 </div>
 
                 {/* Bottom Section - Anchored precisely at bottom edge */}
-                <div className="pt-6">
+                <div className="pt-4">
                   {/* Price Block */}
                   <PriceBlock
                     originalTotal={pricingData.originalTotal}
@@ -512,7 +525,7 @@ export const ShopTheLookSection = () => {
 
                   {/* Add to Bag Button */}
                   <motion.button
-                    className="w-full py-4 rounded-2xl text-lg font-medium transition-colors"
+                    className="w-full py-3 rounded-xl text-base font-medium transition-colors"
                     style={{
                       backgroundColor: 'hsl(var(--forest))',
                       color: 'hsl(var(--forest-foreground))',
@@ -524,14 +537,14 @@ export const ShopTheLookSection = () => {
                     Add Bundle to Bag
                   </motion.button>
 
-                  {/* Incentive Message */}
+                  {/* Incentive Message - More visible */}
                   <AnimatePresence mode="wait">
                     <motion.p
                       key={pricingData.incentiveMessage}
-                      initial={{ opacity: 0, y: 6 }}
+                      initial={{ opacity: 0, y: 4 }}
                       animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -6 }}
-                      className="text-center text-muted-foreground/70 text-sm mt-5 tracking-wide"
+                      exit={{ opacity: 0, y: -4 }}
+                      className="text-center text-neutral-600 text-sm mt-3 tracking-wide"
                     >
                       {pricingData.incentiveMessage}
                     </motion.p>
