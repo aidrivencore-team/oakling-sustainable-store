@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Header } from '@/widgets/header';
 import { HeroSection } from '@/widgets/hero-section';
 import { CategorySection } from '@/widgets/category-section';
+import { ShopTheLookSection } from '@/widgets/shop-the-look';
 import { FeaturedProducts } from '@/widgets/featured-products';
 import { SustainabilitySection } from '@/widgets/sustainability-section';
 import { Footer } from '@/widgets/footer';
@@ -25,6 +26,7 @@ const HomePage = () => {
       <main>
         <HeroSection />
         <CategorySection />
+        <ShopTheLookSection />
         <FeaturedProducts currency={currency} />
         <SustainabilitySection />
       </main>
